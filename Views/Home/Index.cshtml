@@ -1,0 +1,191 @@
+﻿@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
+        <hr />
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Income</h5>
+                        <h2>₹@Model.TotalIncome.ToString("N2")</h2>
+                    </div>
+                    <div class="display-4">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Expenses</h5>
+                        <h2>₹@Model.TotalExpense.ToString("N2")</h2>
+                    </div>
+                    <div class="display-4">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card @(Model.Balance >= 0 ? "bg-primary" : "bg-warning")">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Balance</h5>
+                        <h2>₹@Model.Balance.ToString("N2")</h2>
+                    </div>
+                    <div class="display-4">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Monthly Income vs Expenses</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Top Spending Categories</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a asp-controller="Transaction" asp-action="Create" asp-route-type="1" class="btn btn-success me-2">
+                    <i class="fas fa-plus"></i> Add Income
+                </a>
+                <a asp-controller="Transaction" asp-action="Create" asp-route-type="2" class="btn btn-danger me-2">
+                    <i class="fas fa-minus"></i> Add Expense
+                </a>
+                <a asp-controller="Category" asp-action="Create" class="btn btn-primary me-2">
+                    <i class="fas fa-tag"></i> Add Category
+                </a>
+                <a asp-controller="Transaction" asp-action="Index" class="btn btn-info me-2">
+                    <i class="fas fa-list"></i> View All Transactions
+                </a>
+                <a asp-controller="Report" asp-action="Index" class="btn btn-secondary">
+                    <i class="fas fa-chart-line"></i> View Reports
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Monthly Income vs Expenses Chart
+        const monthlyData = @Html.Raw(Json.Serialize(new {
+            labels = Model.MonthlySummary.Select(m => new DateTime(2024, m.Month, 1).ToString("MMM")),
+            income = Model.MonthlySummary.Select(m => m.Income),
+            expense = Model.MonthlySummary.Select(m => m.Expense)
+        }));
+
+        const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+        new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: monthlyData.labels,
+                datasets: [{
+                    label: 'Income',
+                    data: monthlyData.income,
+                    backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Expense',
+                    data: monthlyData.expense,
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Top Categories Pie Chart
+        const categoryData = @Html.Raw(Json.Serialize(new {
+            labels = Model.TopCategories.Select(c => c.Category),
+            values = Model.TopCategories.Select(c => c.Amount)
+        }));
+
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: categoryData.labels,
+                datasets: [{
+                    data: categoryData.values,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    </script>
+}
